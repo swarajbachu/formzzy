@@ -1,5 +1,5 @@
 import Image from "next/image";
-import MyForm from "./form";
+import MyForm from "./form-components/form";
 import { Card } from "@/components/ui/card";
 
 export default function Home() {

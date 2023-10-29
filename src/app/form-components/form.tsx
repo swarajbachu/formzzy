@@ -15,23 +15,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "invalid email address.",
-  }),
-  days: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: "You have to select at least one item.",
-  }),
-  food: z.enum(["None", "Vegetarian", "Vegan"], {
-    required_error: "You need to select a notification type.",
-  }),
-});
+import hitUrl from "./hitUrl";
+import { ReloadIcon } from "@radix-ui/react-icons";
+import { toast } from "sonner";
 
 const items = [
   {
@@ -48,22 +35,62 @@ const items = [
   },
 ] as const;
 
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "name must be at least 2 characters.",
+  }),
+  email: z.string().email({
+    message: "invalid email address.",
+  }),
+  days: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: "You have to select at least one item.",
+  }),
+  food: z.enum(["None", "Vegetarian", "Vegan"], {
+    required_error: "You need to select a notification type.",
+  }),
+});
+
 function MyForm() {
+  const [loading, setLoading] = React.useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       email: "",
       days: [],
+      food: "None",
     },
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
-    console.log("data")
-    console.log(data);
-    toast({
-      title: "Hehe! Form submitted successfully 🎉",
+    const baseUrl =
+      "https://docs.google.com/forms/d/e/1FAIpQLScu981W5xKq08M5shI9-mr9CvHaBvK4j4ZSnXVWaE9Cg_uZjg/formResponse?";
+    const params: string[] = [];
+
+    params.push(`entry.2092238618=${encodeURIComponent(data.name)}`);
+    params.push(`entry.1556369182=${encodeURIComponent(data.email)}`);
+
+    // Handling days as an array
+    data.days.forEach((day, index) => {
+      params.push(`entry.1753222212=Day+${index + 1}`);
     });
+
+    params.push(`entry.588393791=${encodeURIComponent(data.food)}`);
+    params.push(`entry.2109138769=Yes`);
+
+    const url = baseUrl + params.join("&");
+    setLoading(true);
+    console.log("Submitting form...")
+    try {
+      hitUrl(url);
+    } catch (error) {
+      setLoading(false);
+      console.log(error);
+    }
+    setLoading(false);
+    toast("Form submitted successfully!");
+    form.reset();
   }
 
   return (
@@ -178,8 +205,10 @@ function MyForm() {
             </FormItem>
           )}
         />
-              <Button type="submit">Submit</Button>
-
+        <Button type="submit" disabled={loading}>
+          {loading && <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />}
+          Submit
+        </Button>
       </form>
     </Form>
   );
